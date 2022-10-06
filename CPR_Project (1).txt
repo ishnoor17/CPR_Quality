@@ -1,0 +1,129 @@
+/*
+ * Ishnoor Bakshi CPR, Heart monitor, Project, Dec 2018
+ */
+/* FSR simple testing sketch.  &lt;br&gt;Connect one end of FSR to power, the other end to Analog 0.
+Then connect one end of a 1K resistor from Analog 0 to ground 
+*/
+int fsrPina0 = 0;     // the FSR and 10K pulldown are connected to a0
+int fsrReadinga0 = 0;     // the analog reading from the FSR resistor divider
+int fsrPina1 = 1;     // the FSR and 10K pulldown are connected to a1
+int fsrReadinga1 = 0;     // the analog reading from the FSR resistor divider
+
+const int buttonPin = 8;  // pin for CPR count
+unsigned long time; //to display time for compressions
+const int pressGood = 10;
+const int pressBad =  9;
+int BPM; //final output calculated beats per min
+float bpmCount; // to calculate BPM
+float cprCount = 0;   // counter for the number of button presses, changed from int, changed from float
+int buttonState = 0;         // current state of the button
+int lastButtonState = 0;     // previous state of the button
+int cprTotal = 0; //total of the 5 stored values
+int cprCycle = 0; //keeps track of CPR cycle
+int CompressionTrys = 0; //keeps track of compression trys 
+int  timeSec, timeCPR, BPM_1; //calculating cpr time
+float totalTime;
+unsigned long timeBegin, timeEnd;
+
+ 
+void setup(void) {
+  
+  pinMode(buttonPin, INPUT); //CPR button
+  pinMode(pressGood, OUTPUT); //for good release, led on Green
+  pinMode(pressBad, OUTPUT); // for bad release, led on Red
+  Serial.begin(9600); // start serial communication / uncomment to debug
+  Serial.println(&quot;Begin CPR&quot;);
+    
+}
+ 
+void loop(void) {
+  fsrReadinga0 = 0;
+  //fsrReadinga1 = 0;
+  
+
+  fsrReadinga0 = analogRead(fsrPina0);  
+  //fsrReadinga1 = analogRead(fsrPina1); 
+  
+  Serial.println();
+  Serial.print(&quot;Analog reading fsr0 = &quot;);
+  Serial.print(fsrReadinga0);     // the raw analog reading
+  
+  //Serial.print(&quot; &quot;);
+  //Serial.print(fsrReadinga1);     // the raw analog reading
+  
+  Serial.println ();
+  
+  time = millis(); //start time
+  buttonState = digitalRead(buttonPin);
+  
+  if (buttonState != lastButtonState) {
+  
+    if (buttonState == HIGH) { //depth of at least 2in per AHA guidelines
+      cprCount++; //add 1 to the running total
+      Serial.print(&quot;Count: &quot;);
+      Serial.println(cprCount);
+      if(cprCount == 1){
+         timeBegin = millis(); //beginning time
+      }
+      
+      }
+    
+  }
+  
+//flipped the logic on led
+    if (fsrReadinga0 &gt; 801){
+        digitalWrite(pressGood, HIGH);
+        digitalWrite(pressBad, LOW);
+        CompressionTrys++; //add 1 to the running total of compression trys
+    }
+    else if (fsrReadinga0 &lt; 800){
+        digitalWrite(pressBad, HIGH);
+        digitalWrite(pressGood, LOW);
+    }
+//if ((buttonState == lastButtonState) &amp;&amp; (fsrReadinga0 &gt; 861)) CompressionTrys++; //add 1 to the running
+total of compression trys
+  
+   if (cprCount == 30){ // 30:2 ratio for CPR, 30 total
+            cprCount = 0; //restart count
+            timeEnd = millis(); //capture end time for set
+            totalTime = (timeEnd - timeBegin) / 1000; //convert Ms to seconds
+            
+            bpmCount = ( 30.0 / totalTime); //bpmCount = float
+            
+
+            Serial.print(&quot;Compression Trys Count: &quot;);
+            Serial.println(CompressionTrys);
+            BPM = (bpmCount * 60.0);
+            Serial.print(&quot;Total time in sec: &quot;);
+            Serial.println(totalTime);
+            Serial.print(&quot;Avg Rate (CPM): &quot;);
+            Serial.println(BPM);
+            cprCycle++;
+            Serial.print(&quot;-----------------------------------------------------CPR Cycle #: &quot;);
+            Serial.println(cprCycle);
+            if (cprCycle == 5){
+                cprCycle = 0;
+            }
+            
+     }
+
+     if (cprCount &gt; 5 &amp;&amp; cprCount &lt;= 30) {
+         float rateTime = (millis() - timeBegin) / 1000; //changed int rateTime to unsigned long
+         int rate = (cprCount / rateTime) * 60; //changed int to unsigned int
+         Serial.print(&quot;cprCount is: &quot;);
+         Serial.println(cprCount);
+         Serial.print(&quot;CPM is: &quot;);
+         Serial.println(rate);
+         
+         if (rate &gt;= 100 &amp;&amp; rate &lt;= 120 ){ //AHA guidelines 100-120 CPM
+             Serial.println(&quot;Good&quot;);
+         }
+         else {
+             Serial.println(&quot;Not Good rate -----&quot;);
+         }
+     }
+
+  
+  delay(25);// was 1000
+  lastButtonState = buttonState;
+}
